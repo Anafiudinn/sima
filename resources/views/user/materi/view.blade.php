@@ -84,17 +84,43 @@
                             </svg>
                             <span>{{ $materi->created_at->format('d M Y') }}</span>
                         </div>
-                        <span class="px-2 py-1 bg-red-100 text-red-600 rounded-full text-xs font-medium">PDF</span>
+                        {{-- Logika untuk menampilkan badge tipe file --}}
+                        @php
+                            $extension = pathinfo($materi->file_path, PATHINFO_EXTENSION);
+                            $badgeColor = [
+                                'pdf' => 'bg-red-100 text-red-600',
+                                'doc' => 'bg-blue-100 text-blue-600',
+                                'docx' => 'bg-blue-100 text-blue-600',
+                                'xls' => 'bg-green-100 text-green-600',
+                                'xlsx' => 'bg-green-100 text-green-600',
+                                'ppt' => 'bg-orange-100 text-orange-600',
+                                'pptx' => 'bg-orange-100 text-orange-600',
+                            ];
+                        @endphp
+                        <span class="px-2 py-1 {{ $badgeColor[$extension] ?? 'bg-gray-100 text-gray-600' }} rounded-full text-xs font-medium">{{ strtoupper($extension) }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
+        {{-- Logika untuk menentukan viewer URL --}}
+        @php
+            $extension = pathinfo($materi->file_path, PATHINFO_EXTENSION);
+            $publicFileUrl = asset('storage/' . $materi->file_path);
+
+            // Cek jika file bukan PDF, gunakan Google Docs Viewer
+            if (!in_array($extension, ['pdf'])) {
+                $viewerUrl = 'https://docs.google.com/viewer?url=' . urlencode($publicFileUrl) . '&embedded=true';
+            } else {
+                $viewerUrl = $publicFileUrl;
+            }
+        @endphp
+
         <div id="viewer-container" class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="bg-gray-100 rounded-xl border border-gray-300 overflow-hidden" style="height: 80vh; min-height: 600px;">
                 <div class="h-full flex items-center justify-center">
                     <iframe id="document-viewer"
-                            src="{{ Storage::url($materi->file_path) }}" 
+                            src="{{ $viewerUrl }}" 
                             class="w-full h-full border-0 rounded-xl transition-all duration-300"
                             title="{{ $materi->judul_materi }}"
                             style="transform: scale(1) rotate(0deg); transform-origin: center center;">
@@ -126,23 +152,41 @@
             const zoomLevel = document.getElementById('zoom-level');
             const viewerContainer = document.getElementById('viewer-container');
             
+            // Nonaktifkan fungsionalitas zoom dan rotate jika bukan PDF
+            const extension = '{{ $extension }}';
+            const isPDF = extension.toLowerCase() === 'pdf';
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const rotateBtn = document.getElementById('rotate');
+
+            if (!isPDF) {
+                zoomInBtn.disabled = true;
+                zoomOutBtn.disabled = true;
+                rotateBtn.disabled = true;
+                zoomInBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                zoomOutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                rotateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
             document.getElementById('zoom-in').addEventListener('click', function() {
-                if (zoom < 200) {
+                if (isPDF && zoom < 200) {
                     zoom += 25;
                     updateTransform();
                 }
             });
             
             document.getElementById('zoom-out').addEventListener('click', function() {
-                if (zoom > 50) {
+                if (isPDF && zoom > 50) {
                     zoom -= 25;
                     updateTransform();
                 }
             });
             
             document.getElementById('rotate').addEventListener('click', function() {
-                rotation = (rotation + 90) % 360;
-                updateTransform();
+                if (isPDF) {
+                    rotation = (rotation + 90) % 360;
+                    updateTransform();
+                }
             });
             
             document.getElementById('fullscreen').addEventListener('click', function() {

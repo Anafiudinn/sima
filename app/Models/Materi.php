@@ -44,5 +44,11 @@ class Materi extends Model
         return $query->withCount('historyDownloads')
             ->withCount('view_count');
     }
+    // app/Models/Materi.php
+public function uploadedBy()
+{
+    return $this->belongsTo(User::class, 'uploaded_by');
+}
+
     
 }

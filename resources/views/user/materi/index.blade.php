@@ -70,7 +70,22 @@
             @foreach ($materis as $materi)
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{{ $materi->judul_materi }}</h3>
+                            <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold text-gray-900 line-clamp-2">{{ $materi->judul_materi }}</h3>
+                            @php
+                                $extension = pathinfo($materi->file_path, PATHINFO_EXTENSION);
+                                $badgeColor = [
+                                    'pdf' => 'bg-red-100 text-red-600',
+                                    'doc' => 'bg-blue-100 text-blue-600',
+                                    'docx' => 'bg-blue-100 text-blue-600',
+                                    'xls' => 'bg-green-100 text-green-600',
+                                    'xlsx' => 'bg-green-100 text-green-600',
+                                    'ppt' => 'bg-orange-100 text-orange-600',
+                                    'pptx' => 'bg-orange-100 text-orange-600',
+                                ];
+                            @endphp
+                            <span class="px-2 py-1 {{ $badgeColor[$extension] ?? 'bg-gray-100 text-gray-600' }} rounded-full text-xs font-medium uppercase">{{ $extension }}</span>
+                        </div>
                         <p class="text-gray-600 text-sm mb-4 line-clamp-3">{{ $materi->deskripsi ?? 'Tidak ada deskripsi tersedia untuk materi ini.' }}</p>
                     </div>
                     <div class="mt-4 flex items-center justify-between pt-4 border-t border-gray-100">
