@@ -45,10 +45,10 @@ class Materi extends Model
             ->withCount('view_count');
     }
     // app/Models/Materi.php
-public function uploadedBy()
-{
-    return $this->belongsTo(User::class, 'uploaded_by');
-}
+    public function uploadedBy()
+    {
+        return $this->belongsTo(User::class, 'uploaded_by');
+    }
 
-    
+
 }

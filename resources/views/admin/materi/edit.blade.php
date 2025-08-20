@@ -1,5 +1,6 @@
 @extends('layouts.main')
 
+@section('title', 'Data Materi')
 @section('content')
     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
         <h2 class="text-xl font-semibold text-gray-800 mb-6">Edit Materi</h2>

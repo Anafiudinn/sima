@@ -23,7 +23,7 @@ return new class extends Migration {
 
     /**
      * Reverse the migrations.
-     */
+     */w
     public function down(): void
     {
         Schema::dropIfExists('history_downloads');

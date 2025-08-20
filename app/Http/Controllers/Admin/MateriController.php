@@ -17,16 +17,32 @@ class MateriController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $sortColumn = $request->get('sort', 'tanggal_unggah'); // Default sort: tanggal_unggah
+        $sortDirection = $request->get('direction', 'desc'); // Default direction: desc
 
-        $query = Materi::with(['divisi', 'tempat', 'uploader'])->latest();
+        $query = Materi::with(['divisi', 'tempat', 'uploader']);
 
         if ($search) {
             $query->where('judul_materi', 'like', '%' . $search . '%');
         }
 
-        $materis = $query->paginate(10);
+        // Logika Sorting
+        if ($sortColumn === 'divisi') {
+            // Sorting berdasarkan relasi 'divisi'
+            $query->join('divisis', 'materis.divisi_id', '=', 'divisis.id')
+                ->orderBy('divisis.nama_divisi', $sortDirection)
+                ->select('materis.*'); // Penting untuk menghindari konflik kolom
+        } elseif ($sortColumn === 'tanggal_unggah') {
+            // Sorting berdasarkan kolom 'created_at' di tabel 'materis'
+            $query->orderBy('created_at', $sortDirection);
+        } else {
+            // Default sort jika parameter tidak valid
+            $query->latest();
+        }
 
-        return view('admin.materi.index', compact('materis', 'search'));
+        $materis = $query->paginate(20);
+
+        return view('admin.materi.index', compact('materis', 'search', 'sortColumn', 'sortDirection'));
     }
 
 
@@ -38,14 +54,22 @@ class MateriController extends Controller
 
     public function store(Request $request)
     {
-        //   dd($request->all()); // Cek apakah data sampai ke sini
         $request->validate([
             'judul_materi' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'divisi_id' => 'required|exists:divisis,id',
             'tempat_id' => 'required|exists:tempats,id',
-            //bikin 20 mb
-            'file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx|max:20480', // max 20MB
+            // Validasi tipe file + ukuran max 20 MB
+            'file' => [
+                'required',
+                'file',
+                'max:12480', // 20 MB
+                'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx',
+            ],
+        ], [
+            'file.required' => 'File wajib diunggah.',
+            'file.mimes' => 'Format file harus PDF, DOC, DOCX, PPT, PPTX, XLS, atau XLSX.',
+            'file.max' => 'Ukuran file maksimal 12 MB.',
         ]);
 
         if (!$request->hasFile('file')) {
@@ -54,10 +78,24 @@ class MateriController extends Controller
 
         $file = $request->file('file');
 
+        // Cek MIME type asli untuk menghindari rename ekstensi
+        $allowedMime = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+
+        if (!in_array($file->getMimeType(), $allowedMime)) {
+            return back()->withErrors(['file' => 'Tipe file tidak diizinkan.'])->withInput();
+        }
+
         // Simpan file
         $filePath = $file->store('materi', 'public');
 
-        // Simpan data ke DB
         Materi::create([
             'judul_materi' => $request->judul_materi,
             'deskripsi' => $request->deskripsi,
@@ -68,13 +106,9 @@ class MateriController extends Controller
             'uploaded_by' => auth()->id(),
         ]);
 
-        // Redirect dengan pesan sukses dan gagal
-
         return redirect()->route('admin.materi.index')->with('success', 'Materi berhasil diupload.');
-
-        // Jika ada error, redirect kembali dengan pesan error
-        // return redirect()->back()->withErrors(['error' => 'Gagal mengupload materi.'])->withInput();
     }
+
 
 
     public function edit(Materi $materi)

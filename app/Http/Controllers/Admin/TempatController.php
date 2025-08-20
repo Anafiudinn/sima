@@ -9,10 +9,19 @@ use Illuminate\Http\Request;
 
 class TempatController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tempats = Tempat::with('divisi')->get();
-        return view('admin.tempat.index', compact('tempats'));
+        // Sortir hanya berdasarkan nama divisi
+        $sortDirection = $request->get('direction', 'asc');
+
+        $query = Tempat::with('divisi')
+            ->join('divisis', 'tempats.divisi_id', '=', 'divisis.id')
+            ->orderBy('divisis.nama_divisi', $sortDirection)
+            ->select('tempats.*');
+
+        $tempats = $query->get();
+
+        return view('admin.tempat.index', compact('tempats', 'sortDirection'));
     }
 
     public function create()

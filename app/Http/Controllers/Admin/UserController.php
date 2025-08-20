@@ -4,11 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Divisi; // Import model Divisi
-use App\Models\Tempat; // Import model Tempat
+use App\Models\Divisi;
+use App\Models\Tempat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
 {
@@ -17,7 +16,11 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('divisi', 'tempat')->paginate(10);
+        // hanya tampilkan user role 'user'
+        $users = User::where('role', 'user')
+            ->with('divisi', 'tempat')
+            ->paginate(10);
+
         return view('admin.users.index', compact('users'));
     }
 
@@ -37,19 +40,19 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user',
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|string|email|max:255|unique:users',
+            'password'  => 'required|string|min:8|confirmed',
+            'role'      => 'required|string|in:admin,user',
             'divisi_id' => 'required|exists:divisis,id',
             'tempat_id' => 'required|exists:tempats,id',
         ]);
 
         User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'name'      => $request->name,
+            'email'     => $request->email,
+            'password'  => Hash::make($request->password),
+            'role'      => $request->role,
             'divisi_id' => $request->divisi_id,
             'tempat_id' => $request->tempat_id,
         ]);
@@ -73,14 +76,21 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'required|string|in:admin,pegawai',
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'role'      => 'required|string|in:admin,user',
             'divisi_id' => 'required|exists:divisis,id',
             'tempat_id' => 'required|exists:tempats,id',
+            'password'  => 'nullable|string|min:8|confirmed',
         ]);
 
-        $user->update($request->only(['name', 'email', 'role', 'divisi_id', 'tempat_id']));
+        $data = $request->only(['name', 'email', 'role', 'divisi_id', 'tempat_id']);
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
 
         return redirect()->route('admin.users.index')->with('success', 'User berhasil diperbarui.');
     }
@@ -92,5 +102,13 @@ class UserController extends Controller
     {
         $user->delete();
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus.');
+    }
+
+    public function getTempatByDivisi($divisiId)
+    {
+        $tempats = Tempat::where('divisi_id', $divisiId)
+            ->pluck('nama_tempat', 'id');
+
+        return response()->json($tempats);
     }
 }

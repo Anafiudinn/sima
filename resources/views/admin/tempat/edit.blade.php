@@ -1,4 +1,5 @@
 @extends('layouts.main')
+@section('title', 'Data Tempat')
 
 @section('content')
     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">

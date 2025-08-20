@@ -44,49 +44,54 @@ class MateriController extends Controller
 
         // Increment view count
         $materi->increment('view_count');
-        
+
 
         return view('user.materi.view', compact('materi'));
     }
 
     // Download file materi dengan validasi dan simpan riwayat download
-    public function download(Materi $materi)
-    {
-        $user = Auth::user();
+  public function download(Materi $materi)
+{
+    $user = Auth::user();
 
-        if ($materi->divisi_id != $user->divisi_id || $materi->tempat_id != $user->tempat_id) {
-            abort(403, 'Akses dilarang. Anda tidak berhak mengunduh materi ini.');
-        }
-
-        if (!Storage::disk('public')->exists($materi->file_path)) {
-            abort(404, 'File tidak ditemukan.');
-        }
-
-        $filename = basename($materi->file_path);
-
-        // Increment download count
-        $materi->increment('download_count');
-
-        // Simpan riwayat download
-        HistoryDownload::create([
-            'user_id' => $user->id,
-            'materi_id' => $materi->id,
-            'downloaded_at' => now(),
-        ]);
-
-        return Storage::disk('public')->download($materi->file_path, $filename);
+    // Cek divisi dan tempat
+    if ($materi->divisi_id != $user->divisi_id || $materi->tempat_id != $user->tempat_id) {
+        abort(403, 'Akses dilarang. Anda tidak berhak mengunduh materi ini.');
     }
 
-    // Riwayat unduhan user (optional)
-    public function history()
-    {
-        $user = Auth::user();
-
-        // Asumsi relasi downloadHistories sudah ada di model User
-        $riwayat = $user->downloadHistories()->with('materi')->get();
-
-        return view('user.materi.history', compact('riwayat'));
+    // Cek file ada atau tidak
+    if (!Storage::disk('public')->exists($materi->file_path)) {
+        abort(404, 'File tidak ditemukan.');
     }
+
+    $filename = basename($materi->file_path);
+
+    // Increment download count
+    $materi->increment('download_count');
+
+    // 🔹 Limit maksimal 50 history
+    $historyCount = HistoryDownload::where('user_id', $user->id)->count();
+    if ($historyCount >= 50) {
+        $oldest = HistoryDownload::where('user_id', $user->id)
+            ->orderBy('downloaded_at', 'asc')
+            ->first();
+        if ($oldest) {
+            $oldest->delete();
+        }
+    }
+
+    // Simpan riwayat download
+    HistoryDownload::create([
+        'user_id' => $user->id,
+        'materi_id' => $materi->id,
+        'downloaded_at' => now(),
+    ]);
+
+    // Proses download file
+    return Storage::download($materi->file_path, $filename);
+}
+
+
 
     // Ambil data tempat berdasarkan divisi untuk dropdown dinamis
     public function getTempatByDivisi($divisiId)

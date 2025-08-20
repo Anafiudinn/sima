@@ -16,7 +16,10 @@ class HistoryDownload extends Model
         'downloaded_at',
     ];
 
-    protected $dates = ['downloaded_at'];
+   // Ganti 'protected $dates' dengan 'protected $casts'
+    protected $casts = [
+        'downloaded_at' => 'datetime',
+    ];
 
     public function user()
     {
@@ -27,6 +30,11 @@ class HistoryDownload extends Model
     {
         return $this->belongsTo(Materi::class);
     }
+    public function histories()
+{
+    return $this->hasMany(HistoryDownload::class, 'materi_id');
+}
+
     
     
 }
